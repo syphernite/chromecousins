@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useInView } from 'react-intersection-observer';
@@ -18,8 +18,17 @@ const IG_URL = 'https://www.instagram.com/chromecousins_detailing/';
 
 const Home: React.FC = () => {
   const [heroRef, heroInView] = useInView({ threshold: 0.12, triggerOnce: true });
+  const [trustRef, trustInView] = useInView({ threshold: 0.12, triggerOnce: true });
   const [servicesRef, servicesInView] = useInView({ threshold: 0.12, triggerOnce: true });
   const [testimonialsRef, testimonialsInView] = useInView({ threshold: 0.12, triggerOnce: true });
+
+  // Pretend hero is "loading" until first paint for a nicer skeleton effect
+  const [heroLoaded, setHeroLoaded] = useState(false);
+  useEffect(() => {
+    const img = new Image();
+    img.src = 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1920&auto=format&fit=crop';
+    img.onload = () => setHeroLoaded(true);
+  }, []);
 
   const trustBadges = [
     { icon: MapPin, title: 'Texas Mobile', description: 'We come to you anywhere local' },
@@ -54,14 +63,67 @@ const Home: React.FC = () => {
     }
   ];
 
+  // ---------- Skeletons ----------
+  const BoxShimmer = ({ className = '' }: { className?: string }) => (
+    <div className={`animate-pulse bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 ${className}`} />
+  );
+
+  const TrustSkeleton = ({ delay = 0 }: { delay?: number }) => (
+    <motion.div
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.5, delay }}
+      className="text-center rounded-2xl p-6"
+      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
+      <BoxShimmer className="h-10 w-10 rounded mx-auto mb-3" />
+      <BoxShimmer className="h-4 w-28 rounded mx-auto mb-2" />
+      <BoxShimmer className="h-3 w-40 rounded mx-auto" />
+    </motion.div>
+  );
+
+  const ServiceSkeleton = ({ delay = 0 }: { delay?: number }) => (
+    <motion.div
+      initial={{ y: 24, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.55, delay }}
+      className="rounded-2xl p-6"
+      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
+      <BoxShimmer className="h-12 w-12 rounded mb-3" />
+      <BoxShimmer className="h-4 w-32 rounded mb-2" />
+      <BoxShimmer className="h-3 w-10/12 rounded mb-2" />
+      <BoxShimmer className="h-3 w-8/12 rounded" />
+      <BoxShimmer className="h-8 w-28 rounded mt-5" />
+    </motion.div>
+  );
+
+  const TestimonialSkeleton = ({ delay = 0 }: { delay?: number }) => (
+    <motion.div
+      initial={{ y: 24, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.55, delay }}
+      className="rounded-2xl p-6"
+      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
+      <div className="flex items-center gap-3 mb-3">
+        <BoxShimmer className="h-12 w-12 rounded-full" />
+        <div className="flex-1">
+          <BoxShimmer className="h-4 w-32 rounded mb-2" />
+          <BoxShimmer className="h-3 w-20 rounded" />
+        </div>
+      </div>
+      <BoxShimmer className="h-3 w-full rounded mb-2" />
+      <BoxShimmer className="h-3 w-11/12 rounded mb-2" />
+      <BoxShimmer className="h-3 w-9/12 rounded" />
+    </motion.div>
+  );
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="overflow-hidden bg-black text-white">
       {/* Minimal, safe inline styles (no @import) */}
       <style>{`
-        @keyframes redPulse {
-          0%,100% { box-shadow: 0 0 0 rgba(239,68,68,0); }
-          50% { box-shadow: 0 0 32px rgba(239,68,68,.35); }
-        }
+        @keyframes redPulse { 0%,100% { box-shadow: 0 0 0 rgba(239,68,68,0); } 50% { box-shadow: 0 0 32px rgba(239,68,68,.35); } }
         .cc-cta-glow { animation: redPulse 3s ease-in-out infinite; }
         .cc-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
         .cc-card-hover:hover { background: rgba(255,255,255,0.07); }
@@ -81,12 +143,15 @@ const Home: React.FC = () => {
 
       {/* HERO */}
       <section ref={heroRef} className="relative min-h-[100svh] flex items-center justify-center">
+        {/* Skeleton behind, image on top when loaded */}
+        {!heroLoaded && <BoxShimmer className="absolute inset-0" />}
         <img
           src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1920&auto=format&fit=crop"
           alt=""
-          className="absolute inset-0 w-full h-full object-cover"
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${heroLoaded ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={() => setHeroLoaded(true)}
           loading="eager"
-          fetchpriority="high"   /* <-- fixed: lowercase so React passes it to DOM */
+          fetchpriority="high"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/65 to-black/90 diagonal-overlay" />
 
@@ -104,9 +169,7 @@ const Home: React.FC = () => {
 
           <h1 className="leading-none tracking-tight">
             <span className="chrome-text block text-[48px] md:text-[88px]">CHROME COUSINS</span>
-            <span className="block mt-2 text-2xl md:text-4xl font-extrabold text-white/90">
-              Mobile Detailing • Texas
-            </span>
+            <span className="block mt-2 text-2xl md:text-4xl font-extrabold text-white/90">Mobile Detailing • Texas</span>
           </h1>
 
           <p className="mt-6 text-lg md:text-xl text-white/80 max-w-2xl mx-auto">
@@ -130,21 +193,23 @@ const Home: React.FC = () => {
 
       {/* TRUST */}
       <section className="py-14 bg-black">
-        <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {trustBadges.map((b, i) => (
-            <motion.div
-              key={b.title}
-              initial={{ y: 20, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="text-center rounded-2xl cc-card cc-card-hover p-6"
-            >
-              <b.icon className="h-10 w-10 text-red-500 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold">{b.title}</h3>
-              <p className="text-white/70">{b.description}</p>
-            </motion.div>
-          ))}
+        <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-6" ref={trustRef}>
+          {!trustInView
+            ? [0, 1, 2].map((i) => <TrustSkeleton key={`trust-skel-${i}`} delay={i * 0.08} />)
+            : trustBadges.map((b, i) => (
+                <motion.div
+                  key={b.title}
+                  initial={{ y: 20, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                  className="text-center rounded-2xl cc-card cc-card-hover p-6"
+                >
+                  <b.icon className="h-10 w-10 text-red-500 mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold">{b.title}</h3>
+                  <p className="text-white/70">{b.description}</p>
+                </motion.div>
+              ))}
         </div>
       </section>
 
@@ -179,25 +244,27 @@ const Home: React.FC = () => {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {services.map((s, i) => (
-              <motion.div
-                key={s.title}
-                initial={{ y: 24, opacity: 0 }}
-                animate={servicesInView ? { y: 0, opacity: 1 } : {}}
-                transition={{ duration: 0.55, delay: i * 0.08 }}
-                whileHover={{ y: -4 }}
-                className="rounded-2xl cc-card cc-card-hover p-6"
-              >
-                <s.icon className="h-12 w-12 text-red-500 mb-3" />
-                <h3 className="text-xl font-bold">{s.title}</h3>
-                <p className="text-white/75">{s.description}</p>
-                <div className="mt-5">
-                  <Link to="/services" className="inline-block text-red-300 hover:text-red-200 font-semibold">
-                    View details
-                  </Link>
-                </div>
-              </motion.div>
-            ))}
+            {!servicesInView
+              ? [0, 1, 2].map((i) => <ServiceSkeleton key={`srv-skel-${i}`} delay={i * 0.08} />)
+              : services.map((s, i) => (
+                  <motion.div
+                    key={s.title}
+                    initial={{ y: 24, opacity: 0 }}
+                    animate={servicesInView ? { y: 0, opacity: 1 } : {}}
+                    transition={{ duration: 0.55, delay: i * 0.08 }}
+                    whileHover={{ y: -4 }}
+                    className="rounded-2xl cc-card cc-card-hover p-6"
+                  >
+                    <s.icon className="h-12 w-12 text-red-500 mb-3" />
+                    <h3 className="text-xl font-bold">{s.title}</h3>
+                    <p className="text-white/75">{s.description}</p>
+                    <div className="mt-5">
+                      <Link to="/services" className="inline-block text-red-300 hover:text-red-200 font-semibold">
+                        View details
+                      </Link>
+                    </div>
+                  </motion.div>
+                ))}
           </div>
         </div>
       </section>
@@ -216,11 +283,13 @@ const Home: React.FC = () => {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((t, i) => (
-              <motion.div key={t.name} initial={{ y: 24, opacity: 0 }} animate={testimonialsInView ? { y: 0, opacity: 1 } : {}} transition={{ duration: 0.55, delay: i * 0.08 }}>
-                <TestimonialCard {...t} />
-              </motion.div>
-            ))}
+            {!testimonialsInView
+              ? [0, 1, 2].map((i) => <TestimonialSkeleton key={`tst-skel-${i}`} delay={i * 0.08} />)
+              : testimonials.map((t, i) => (
+                  <motion.div key={t.name} initial={{ y: 24, opacity: 0 }} animate={testimonialsInView ? { y: 0, opacity: 1 } : {}} transition={{ duration: 0.55, delay: i * 0.08 }}>
+                    <TestimonialCard {...t} />
+                  </motion.div>
+                ))}
           </div>
         </div>
       </section>

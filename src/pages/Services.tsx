@@ -1,26 +1,84 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { CheckCircle, Phone, MessageSquare, Instagram, Clock, Zap } from 'lucide-react';
 
 const Services: React.FC = () => {
+  // In-view tracking for staged reveals + skeletons
   const [packagesRef, packagesInView] = useInView({ threshold: 0.1, triggerOnce: true });
+  const [addonsRef, addonsInView] = useInView({ threshold: 0.1, triggerOnce: true });
 
-  // Use iframe embed (more reliable in SPAs than the script-based widget)
-  // Tip: keep this domain value in sync with your live domain
-  const EMBED_DOMAIN = 'chromecousinsdetailing.com';
-  const CALENDLY_URL = useMemo(
-    () =>
-      `https://calendly.com/built4youonline/30min?embed_domain=${encodeURIComponent(
-        EMBED_DOMAIN
-      )}&embed_type=Inline&hide_gdpr_banner=1`,
-    []
-  );
+  // ======== Calendly Embed (stable in SPAs) ========
+  const [frameLoaded, setFrameLoaded] = useState(false);
+  const [frameHeight, setFrameHeight] = useState(900);
+  const [showRetry, setShowRetry] = useState(false);
+  const [readyToLoad, setReadyToLoad] = useState(false); // lazy-init when in view
+  const { ref: bookRef, inView: bookInView } = useInView({ threshold: 0.01, triggerOnce: true });
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  // PRICING (flat across vehicle types)
-  // - Basic Wash: $70
-  // - Interior OR Exterior Only: $50
-  // - Premium Wash: $120
+  // Use actual hostname for Calendly's embed_domain
+  const embedDomain = useMemo(() => {
+    if (typeof window !== 'undefined' && window.location?.hostname) {
+      return window.location.hostname;
+    }
+    return 'chromecousinsdetailing.com';
+  }, []);
+
+  const CALENDLY_URL = useMemo(() => {
+    const base = 'https://calendly.com/built4youonline/30min';
+    const params = new URLSearchParams({
+      embed_domain: embedDomain,
+      embed_type: 'Inline',
+      hide_gdpr_banner: '1',
+    });
+    return `${base}?${params.toString()}`;
+  }, [embedDomain]);
+
+  // Responsive iframe height
+  useEffect(() => {
+    const computeHeight = () => {
+      const h = Math.max(760, Math.min(window.innerHeight - 120, 1000));
+      setFrameHeight(h);
+    };
+    computeHeight();
+    window.addEventListener('resize', computeHeight);
+    return () => window.removeEventListener('resize', computeHeight);
+  }, []);
+
+  // Honor /services#book deep link
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#book') {
+      const el = document.getElementById('book');
+      if (el) el.scrollIntoView({ behavior: 'instant', block: 'start' as ScrollLogicalPosition });
+    }
+  }, []);
+
+  // Lazy load Calendly when section enters viewport
+  useEffect(() => {
+    if (bookInView) setReadyToLoad(true);
+  }, [bookInView]);
+
+  // Show retry if iframe takes too long
+  useEffect(() => {
+    if (!readyToLoad) return;
+    setShowRetry(false);
+    const t = window.setTimeout(() => {
+      if (!frameLoaded) setShowRetry(true);
+    }, 8000);
+    return () => window.clearTimeout(t);
+  }, [readyToLoad, frameLoaded]);
+
+  const reloadIframe = () => {
+    setFrameLoaded(false);
+    setShowRetry(false);
+    if (iframeRef.current) {
+      const url = new URL(CALENDLY_URL);
+      url.searchParams.set('_cb', Date.now().toString());
+      iframeRef.current.src = url.toString();
+    }
+  };
+
+  // ======== Pricing Data ========
   const packages = [
     {
       name: 'Basic Wash',
@@ -63,7 +121,49 @@ const Services: React.FC = () => {
     { name: 'Headlight Restoration', price: 65, description: 'Remove oxidation and restore clarity' },
   ];
 
-  const [frameLoaded, setFrameLoaded] = useState(false);
+  // ======== Skeleton helpers ========
+  const CardSkeleton = ({ delay = 0 }: { delay?: number }) => (
+    <motion.div
+      initial={{ y: 30, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.6, delay }}
+      className="relative rounded-2xl p-6 bg-zinc-900 border border-white/10"
+    >
+      <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+        <div className="animate-pulse w-full h-full bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900" />
+      </div>
+      <div className="relative">
+        <div className="h-6 w-40 bg-white/10 rounded mb-4" />
+        <div className="h-8 w-24 bg-white/10 rounded mb-2" />
+        <div className="h-3 w-40 bg-white/10 rounded mb-6" />
+        <div className="space-y-3 mb-8">
+          <div className="h-3 w-full bg-white/10 rounded" />
+          <div className="h-3 w-11/12 bg-white/10 rounded" />
+          <div className="h-3 w-10/12 bg-white/10 rounded" />
+          <div className="h-3 w-8/12 bg-white/10 rounded" />
+        </div>
+        <div className="h-11 w-full bg-white/10 rounded" />
+      </div>
+    </motion.div>
+  );
+
+  const AddonSkeleton = ({ delay = 0 }: { delay?: number }) => (
+    <motion.div
+      initial={{ y: 24, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.55, delay }}
+      className="bg-zinc-900 border border-white/10 p-6 rounded-lg"
+    >
+      <div className="animate-pulse">
+        <div className="flex justify-between items-center mb-3">
+          <div className="h-5 w-40 bg-white/10 rounded" />
+          <div className="h-6 w-16 bg-white/10 rounded" />
+        </div>
+        <div className="h-3 w-full bg-white/10 rounded mb-2" />
+        <div className="h-3 w-10/12 bg-white/10 rounded" />
+      </div>
+    </motion.div>
+  );
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pt-20 bg-black text-white">
@@ -72,7 +172,9 @@ const Services: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 text-center">
           <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.6 }}>
             <h1 className="text-4xl md:text-6xl font-black mb-3 tracking-tight">Packages & Booking</h1>
-            <p className="text-white/70 mb-6">Serving <span className="text-white">El Paso, TX</span> and nearby areas</p>
+            <p className="text-white/70 mb-6">
+              Serving <span className="text-white">El Paso, TX</span> and nearby areas
+            </p>
             <div className="bg-red-600 text-black px-8 py-4 rounded-lg inline-flex items-center gap-3 text-lg font-semibold mb-2 shadow-[0_0_25px_rgba(239,68,68,.35)]">
               <Zap className="h-6 w-6" />
               <span>No water or power? We bring our own.</span>
@@ -95,86 +197,99 @@ const Services: React.FC = () => {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {packages.map((pkg, index) => (
-              <motion.div
-                key={pkg.name}
-                initial={{ y: 30, opacity: 0 }}
-                animate={packagesInView ? { y: 0, opacity: 1 } : {}}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className={`relative rounded-2xl p-6 bg-zinc-900 border border-white/10 hover:bg-zinc-800 transition-all ${pkg.popular ? 'ring-2 ring-red-500' : ''}`}
-                whileHover={{ y: -5 }}
-              >
-                {pkg.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-red-600 text-black px-4 py-1 rounded-full text-sm font-semibold shadow-[0_0_16px_rgba(239,68,68,.35)]">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
+            {/* Show skeletons until packages section is in view */}
+            {!packagesInView
+              ? [0, 1, 2].map((i) => <CardSkeleton key={`pkg-skel-${i}`} delay={i * 0.1} />)
+              : packages.map((pkg, index) => (
+                  <motion.div
+                    key={pkg.name}
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={packagesInView ? { y: 0, opacity: 1 } : {}}
+                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                    className={`relative rounded-2xl p-6 bg-zinc-900 border border-white/10 hover:bg-zinc-800 transition-all ${
+                      pkg.popular ? 'ring-2 ring-red-500' : ''
+                    }`}
+                    whileHover={{ y: -5 }}
+                  >
+                    {pkg.popular && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <span className="bg-red-600 text-black px-4 py-1 rounded-full text-sm font-semibold shadow-[0_0_16px_rgba(239,68,68,.35)]">
+                          Most Popular
+                        </span>
+                      </div>
+                    )}
 
-                <h3 className="text-2xl font-bold mb-4 text-center">{pkg.name}</h3>
+                    <h3 className="text-2xl font-bold mb-4 text-center">{pkg.name}</h3>
 
-                <div className="text-center mb-6">
-                  <div className="text-sm text-white/60 mb-2">Flat price</div>
-                  <div className="text-3xl font-extrabold text-red-500 mb-2">
-                    ${pkg.prices.sedan}
-                  </div>
-                  <div className="text-xs text-white/50">Same price for sedan, SUV, or truck</div>
-                </div>
+                    <div className="text-center mb-6">
+                      <div className="text-sm text-white/60 mb-2">Flat price</div>
+                      <div className="text-3xl font-extrabold text-red-500 mb-2">${pkg.prices.sedan}</div>
+                      <div className="text-xs text-white/50">Same price for sedan, SUV, or truck</div>
+                    </div>
 
-                <ul className="space-y-3 mb-8">
-                  {pkg.features.map((feature, i) => (
-                    <li key={i} className="flex items-start text-sm">
-                      <CheckCircle className="h-4 w-4 text-emerald-500 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                    <ul className="space-y-3 mb-8">
+                      {pkg.features.map((feature, i) => (
+                        <li key={i} className="flex items-start text-sm">
+                          <CheckCircle className="h-4 w-4 text-emerald-500 mr-2 mt-0.5 flex-shrink-0" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
 
-                {/* Call-to-book button */}
-                <a
-                  href="tel:9153185633"
-                  className="w-full inline-block text-center bg-red-600 hover:bg-red-500 text-black py-3 rounded-lg font-semibold transition-colors shadow-[0_0_16px_rgba(239,68,68,.35)]"
-                >
-                  Call to Book
-                </a>
-              </motion.div>
-            ))}
+                    <a
+                      href="tel:9153185633"
+                      className="w-full inline-block text-center bg-red-600 hover:bg-red-500 text-black py-3 rounded-lg font-semibold transition-colors shadow-[0_0_16px_rgba(239,68,68,.35)]"
+                    >
+                      Call to Book
+                    </a>
+                  </motion.div>
+                ))}
           </div>
         </div>
       </section>
 
       {/* Online Booking (Calendly via iframe) */}
-      <section id="book" className="py-16 bg-zinc-950">
+      <section id="book" ref={bookRef} className="py-16 bg-zinc-950">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold mb-4">Book Online</h2>
             <p className="text-white/70">Choose a time that works for you. Bookings sync to our calendar instantly.</p>
           </div>
 
-          {/* Loader */}
+          {/* Skeleton Loader for Calendly */}
           {!frameLoaded && (
-            <div className="w-full max-w-4xl mx-auto mb-4 rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-              <div className="animate-pulse text-white/70">Loading scheduler…</div>
+            <div className="w-full max-w-4xl mx-auto mb-6 rounded-xl border border-white/10 bg-white/5 overflow-hidden">
+              <div className="animate-pulse h-[700px] sm:h-[800px] md:h-[900px] bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800" />
             </div>
           )}
 
           <div className="w-full max-w-4xl mx-auto rounded-2xl overflow-hidden border border-white/10">
-            <iframe
-              key="calendly-iframe"
-              title="Schedule with Chrome Cousins Detailing"
-              src={CALENDLY_URL}
-              onLoad={() => setFrameLoaded(true)}
-              style={{ width: '100%', height: '900px', border: '0', display: 'block' }}
-              allowTransparency
-              scrolling="no"
-            />
+            {readyToLoad && (
+              <iframe
+                ref={iframeRef}
+                key={`cal-iframe-${embedDomain}`}
+                title="Schedule with Chrome Cousins Detailing"
+                src={CALENDLY_URL}
+                onLoad={() => setFrameLoaded(true)}
+                loading="lazy"
+                style={{ width: '100%', height: `${frameHeight}px`, border: '0', display: 'block' }}
+                allow="clipboard-read; clipboard-write"
+                scrolling="no"
+              />
+            )}
           </div>
 
-          {/* Fallback link (in case iframes are blocked) */}
-          <div className="text-center mt-4">
+          <div className="text-center mt-4 space-x-3">
+            {showRetry && (
+              <button
+                onClick={reloadIframe}
+                className="inline-block px-5 py-3 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-white/90"
+              >
+                Reload scheduler
+              </button>
+            )}
             <a
-              href="https://calendly.com/built4youonline/30min"
+              href="https://calendly.com/bbuilt4youonline/30min"
               target="_blank"
               rel="noreferrer"
               className="inline-block px-5 py-3 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-white/90"
@@ -186,7 +301,7 @@ const Services: React.FC = () => {
       </section>
 
       {/* Add-ons */}
-      <section className="py-16 bg-zinc-950">
+      <section ref={addonsRef} className="py-16 bg-zinc-950">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Add-On Services</h2>
@@ -194,22 +309,25 @@ const Services: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {addOns.map((addon, index) => (
-              <motion.div
-                key={addon.name}
-                initial={{ y: 30, opacity: 0 }}
-                animate={packagesInView ? { y: 0, opacity: 1 } : {}}
-                transition={{ duration: 0.6, delay: 0.4 + index * 0.1 }}
-                className="bg-zinc-900 border border-white/10 p-6 rounded-lg hover:bg-zinc-800 transition-colors"
-                whileHover={{ y: -3 }}
-              >
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-lg font-semibold">{addon.name}</h3>
-                  <span className="text-xl font-bold text-red-500">+${addon.price}</span>
-                </div>
-                <p className="text-white/70 text-sm">{addon.description}</p>
-              </motion.div>
-            ))}
+            {/* Show skeletons until add-ons section is in view */}
+            {!addonsInView
+              ? Array.from({ length: 6 }).map((_, i) => <AddonSkeleton key={`addon-skel-${i}`} delay={0.1 + i * 0.06} />)
+              : addOns.map((addon, index) => (
+                  <motion.div
+                    key={addon.name}
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={addonsInView ? { y: 0, opacity: 1 } : {}}
+                    transition={{ duration: 0.6, delay: 0.4 + index * 0.1 }}
+                    className="bg-zinc-900 border border-white/10 p-6 rounded-lg hover:bg-zinc-800 transition-colors"
+                    whileHover={{ y: -3 }}
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-lg font-semibold">{addon.name}</h3>
+                      <span className="text-xl font-bold text-red-500">+${addon.price}</span>
+                    </div>
+                    <p className="text-white/70 text-sm">{addon.description}</p>
+                  </motion.div>
+                ))}
           </div>
         </div>
       </section>
@@ -253,7 +371,9 @@ const Services: React.FC = () => {
                 >
                   Instagram
                 </a>
-                <a href="#" className="text-red-500 hover:text-red-400">TikTok</a>
+                <a href="#" className="text-red-500 hover:text-red-400">
+                  TikTok
+                </a>
               </div>
             </div>
           </div>
