@@ -9,7 +9,7 @@ const SEO: React.FC = () => {
     switch (location.pathname) {
       case '/':
         return {
-          title: 'hrome Cousins - Premium Mobile Car Detailing | We Come To You',
+          title: 'Chrome Cousins - Premium Mobile Car Detailing | We Come To You',
           description: 'Professional mobile car detailing services delivered to your door. Interior, exterior, and ceramic coating packages. Fully insured with satisfaction guarantee.',
           keywords: 'mobile car detailing, car wash, ceramic coating, auto detailing, mobile service'
         };
@@ -21,7 +21,7 @@ const SEO: React.FC = () => {
         };
       case '/results':
         return {
-          title: 'Before & After Results | hrome Cousins Mobile Detailing - Gallery',
+          title: 'Before & After Results | Chrome Cousins Mobile Detailing - Gallery',
           description: 'See stunning before and after results from our mobile car detailing services. Over 500 cars detailed on-site with guaranteed satisfaction.',
           keywords: 'car detailing results, before after photos, mobile detailing gallery'
         };
