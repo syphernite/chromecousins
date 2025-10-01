@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { CheckCircle, Phone, MessageSquare, Instagram, Clock, Zap } from 'lucide-react';
@@ -6,16 +6,16 @@ import { CheckCircle, Phone, MessageSquare, Instagram, Clock, Zap } from 'lucide
 const Services: React.FC = () => {
   const [packagesRef, packagesInView] = useInView({ threshold: 0.1, triggerOnce: true });
 
-  // Load Calendly widget script once for the Booking section
-  useEffect(() => {
-    if (!document.querySelector('#calendly-widget')) {
-      const s = document.createElement('script');
-      s.id = 'calendly-widget';
-      s.src = 'https://assets.calendly.com/assets/external/widget.js';
-      s.async = true;
-      document.body.appendChild(s);
-    }
-  }, []);
+  // Use iframe embed (more reliable in SPAs than the script-based widget)
+  // Tip: keep this domain value in sync with your live domain
+  const EMBED_DOMAIN = 'chromecousinsdetailing.com';
+  const CALENDLY_URL = useMemo(
+    () =>
+      `https://calendly.com/built4youonline/30min?embed_domain=${encodeURIComponent(
+        EMBED_DOMAIN
+      )}&embed_type=Inline&hide_gdpr_banner=1`,
+    []
+  );
 
   // PRICING (flat across vehicle types)
   // - Basic Wash: $70
@@ -62,6 +62,8 @@ const Services: React.FC = () => {
     { name: 'Engine Bay Detail', price: 75, description: 'Complete engine compartment cleaning' },
     { name: 'Headlight Restoration', price: 65, description: 'Remove oxidation and restore clarity' },
   ];
+
+  const [frameLoaded, setFrameLoaded] = useState(false);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pt-20 bg-black text-white">
@@ -142,7 +144,7 @@ const Services: React.FC = () => {
         </div>
       </section>
 
-      {/* Online Booking (Calendly) */}
+      {/* Online Booking (Calendly via iframe) */}
       <section id="book" className="py-16 bg-zinc-950">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-8">
@@ -150,11 +152,36 @@ const Services: React.FC = () => {
             <p className="text-white/70">Choose a time that works for you. Bookings sync to our calendar instantly.</p>
           </div>
 
-          <div
-            className="calendly-inline-widget w-full mx-auto rounded-2xl overflow-hidden border border-white/10"
-            data-url="https://calendly.com/built4youonline"
-            style={{ minWidth: '320px', height: '900px' }}
-          />
+          {/* Loader */}
+          {!frameLoaded && (
+            <div className="w-full max-w-4xl mx-auto mb-4 rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+              <div className="animate-pulse text-white/70">Loading scheduler…</div>
+            </div>
+          )}
+
+          <div className="w-full max-w-4xl mx-auto rounded-2xl overflow-hidden border border-white/10">
+            <iframe
+              key="calendly-iframe"
+              title="Schedule with Chrome Cousins Detailing"
+              src={CALENDLY_URL}
+              onLoad={() => setFrameLoaded(true)}
+              style={{ width: '100%', height: '900px', border: '0', display: 'block' }}
+              allowTransparency
+              scrolling="no"
+            />
+          </div>
+
+          {/* Fallback link (in case iframes are blocked) */}
+          <div className="text-center mt-4">
+            <a
+              href="https://calendly.com/built4youonline/30min"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block px-5 py-3 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-white/90"
+            >
+              Open in Calendly
+            </a>
+          </div>
         </div>
       </section>
 

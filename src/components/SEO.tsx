@@ -9,25 +9,25 @@ const SEO: React.FC = () => {
     switch (location.pathname) {
       case '/':
         return {
-          title: 'Shine Xpress - Premium Mobile Car Detailing | We Come To You',
+          title: 'hrome Cousins - Premium Mobile Car Detailing | We Come To You',
           description: 'Professional mobile car detailing services delivered to your door. Interior, exterior, and ceramic coating packages. Fully insured with satisfaction guarantee.',
           keywords: 'mobile car detailing, car wash, ceramic coating, auto detailing, mobile service'
         };
       case '/services':
         return {
-          title: 'Car Detailing Packages & Booking | Shine Xpress Mobile Service',
+          title: 'Car Detailing Packages & Booking | Chrome Cousins Mobile Detailing',
           description: 'Choose from Basic, Deluxe, Ultimate, and Ceramic packages. Book your mobile car detailing service online. We bring water, power, and professional equipment.',
           keywords: 'car detailing packages, mobile detailing booking, ceramic coating, interior detailing'
         };
       case '/results':
         return {
-          title: 'Before & After Results | Shine Xpress Car Detailing Gallery',
+          title: 'Before & After Results | hrome Cousins Mobile Detailing - Gallery',
           description: 'See stunning before and after results from our mobile car detailing services. Over 500 cars detailed on-site with guaranteed satisfaction.',
           keywords: 'car detailing results, before after photos, mobile detailing gallery'
         };
       default:
         return {
-          title: 'Shine Xpress - Premium Mobile Car Detailing',
+          title: 'Chrome Cousins - Premium Mobile Car Detailing',
           description: 'Professional mobile car detailing services',
           keywords: 'mobile car detailing, auto detailing'
         };
@@ -46,7 +46,7 @@ const SEO: React.FC = () => {
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:type" content="website" />
-      <meta property="og:site_name" content="Shine Xpress" />
+      <meta property="og:site_name" content="Chrome Cousins" />
       
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
@@ -59,10 +59,10 @@ const SEO: React.FC = () => {
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "LocalBusiness",
-            "name": "Shine Xpress",
+            "name": "Chrome Cousins",
             "description": "Premium mobile car detailing services",
             "url": window.location.origin,
-            "telephone": "(555) 123-SHINE",
+            "telephone": "(915) 318-5633",
             "address": {
               "@type": "PostalAddress",
               "addressLocality": "Metro Area",
